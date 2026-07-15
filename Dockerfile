@@ -71,10 +71,6 @@ RUN mkdir -p ${APP_HOME}/data/memory \
              ${APP_HOME}/prompts/compliance \
     && chown -R ${APP_USER}:${APP_GROUP} ${APP_HOME}/data
 
-# Persist uploaded PDFs and memory outside the container
-VOLUME ${APP_HOME}/data/uploads
-VOLUME ${APP_HOME}/data/memory
-
 # Copy runtime configs, prompts, and scripts
 COPY --chown=${APP_USER}:${APP_GROUP} configs/ ${APP_HOME}/configs/
 COPY --chown=${APP_USER}:${APP_GROUP} prompts/ ${APP_HOME}/prompts/
