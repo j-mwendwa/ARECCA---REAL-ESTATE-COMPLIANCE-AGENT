@@ -9,7 +9,6 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-from llama_index.core import Document as LLDocument
 from llama_index.core import Settings
 from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.readers.file import PDFReader

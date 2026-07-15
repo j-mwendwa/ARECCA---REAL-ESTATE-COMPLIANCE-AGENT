@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from src.config import settings
 
 _DATA_DIR = Path(__file__).parent.parent.parent / "data" / "memory"
 _ENCRYPTION_KEY = os.getenv("MEMORY_ENCRYPTION_KEY", "")

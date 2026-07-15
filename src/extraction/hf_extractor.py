@@ -6,15 +6,13 @@ Uses ContextAssembler for prompt assembly with entity memory + conversation summ
 token counting, and context trimming.
 """
 import json
-import time
 from typing import Any, Optional
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-from src.config import settings, cfg
+from src.config import cfg
 from src.core.exceptions import ExtractionError
 from src.core.context_assembler import ContextAssembler
-from src.core.token_counter import count_tokens
 from src.extraction.schemas import LeaseTerms, ExtractionResult, RentSchedule
 
 _HF_CFG = cfg.get("llm", {})
@@ -87,17 +85,11 @@ def extract_lease_terms(
     assembled = assembler.assemble(sections)
     prompt = assembled.build_prompt(schema_json)
 
-    input_tokens = count_tokens(prompt)
-    start = time.monotonic()
-
     try:
         output = gen(prompt, return_full_text=False)
         content = output[0]["generated_text"]
-        latency_ms = (time.monotonic() - start) * 1000
     except Exception as e:
         raise ExtractionError(f"HF extraction failed: {e}") from e
-
-    output_tokens = count_tokens(content)
 
     cleaned = _clean_json(content)
     if not cleaned:
@@ -128,15 +120,24 @@ def extract_lease_terms(
     if document_id and assembler.memory:
         lt = lease_terms
         facts = {}
-        if lt.lessor: facts["lessor"] = lt.lessor
-        if lt.lessee: facts["lessee"] = lt.lessee
-        if lt.lease_start_date: facts["lease_start_date"] = str(lt.lease_start_date)
-        if lt.lease_end_date: facts["lease_end_date"] = str(lt.lease_end_date)
-        if lt.base_rent_monthly: facts["base_rent_monthly"] = str(lt.base_rent_monthly)
-        if lt.escalation_type: facts["escalation_type"] = lt.escalation_type
-        if lt.escalation_rate: facts["escalation_rate"] = str(lt.escalation_rate)
-        if lt.security_deposit: facts["security_deposit"] = str(lt.security_deposit)
-        if lt.late_fee_amount: facts["late_fee_amount"] = str(lt.late_fee_amount)
+        if lt.lessor:
+            facts["lessor"] = lt.lessor
+        if lt.lessee:
+            facts["lessee"] = lt.lessee
+        if lt.lease_start_date:
+            facts["lease_start_date"] = str(lt.lease_start_date)
+        if lt.lease_end_date:
+            facts["lease_end_date"] = str(lt.lease_end_date)
+        if lt.base_rent_monthly:
+            facts["base_rent_monthly"] = str(lt.base_rent_monthly)
+        if lt.escalation_type:
+            facts["escalation_type"] = lt.escalation_type
+        if lt.escalation_rate:
+            facts["escalation_rate"] = str(lt.escalation_rate)
+        if lt.security_deposit:
+            facts["security_deposit"] = str(lt.security_deposit)
+        if lt.late_fee_amount:
+            facts["late_fee_amount"] = str(lt.late_fee_amount)
         assembler.memory.update(facts)
 
     return ExtractionResult(

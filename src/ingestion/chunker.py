@@ -1,7 +1,6 @@
 import re
 from typing import Any
 
-from src.core.exceptions import IngestionError
 
 
 _PREFIX = r"(?:#+\s*)?(?:section\s+[\d.]+\s*[.:–—-]?\s*)?(?:article\s+[\d.]+\s*[.:–—-]?\s*)?(?:§\s+[\d.]+\s*[.:–—-]?\s*)?"

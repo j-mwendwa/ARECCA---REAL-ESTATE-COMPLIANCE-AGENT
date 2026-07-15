@@ -1,7 +1,5 @@
 from src.compliance.engine import run_compliance_check
-from src.compliance.rules import ComplianceRule
 from src.extraction.schemas import LeaseTerms
-from datetime import date
 
 
 def test_late_fee_excessive():

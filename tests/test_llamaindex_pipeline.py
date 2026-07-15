@@ -1,4 +1,3 @@
-from pathlib import Path
 from src.ingestion.llamaindex_pipeline import ingest_and_chunk, LingestedDocument
 from src.core.exceptions import IngestionError
 

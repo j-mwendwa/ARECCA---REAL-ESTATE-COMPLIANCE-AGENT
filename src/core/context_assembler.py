@@ -4,9 +4,7 @@ conversation summary, token counting, and trimming.
 
 Reference: LLM-RAG-PIPELINE / src/core/context_assembler.py
 """
-import json
 import structlog
-from typing import Optional
 
 from src.core.prompt_manager import load_prompt
 from src.core.token_counter import count_tokens, truncate_to_token_limit

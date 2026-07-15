@@ -3,7 +3,6 @@ High-efficiency math validation tool for rent escalation calculations.
 Uses NumPy vectorization for batch schedule validation.
 """
 import numpy as np
-from decimal import Decimal
 from typing import Any, Optional
 from langchain_core.tools import tool
 

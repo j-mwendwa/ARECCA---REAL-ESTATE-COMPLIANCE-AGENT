@@ -1,4 +1,3 @@
-from datetime import date
 from src.validation.math_validator import validate_rent_escalation
 from src.extraction.schemas import LeaseTerms, RentSchedule
 

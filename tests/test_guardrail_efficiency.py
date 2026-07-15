@@ -4,7 +4,6 @@ from src.graph.guardrails import (
     check_input_security,
     check_output_security,
     check_text_injection,
-    _cached_input_check,
 )
 
 

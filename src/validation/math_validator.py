@@ -3,7 +3,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
 from src.config import cfg
-from src.extraction.schemas import LeaseTerms, RentSchedule
+from src.extraction.schemas import LeaseTerms
 
 
 _validation_cfg = cfg.get("validation", {})
