@@ -7,6 +7,7 @@ input_guardrail → ingest → chunk → extract → math_validate → complianc
 Reference: LLM-RAG-PIPELINE / src/graph/graph.py
 """
 from langgraph.graph import StateGraph, END
+from langgraph.graph.state import CompiledStateGraph
 from src.graph.state import AgentState
 from src.graph.nodes import (
     input_guardrail_node,
@@ -23,7 +24,7 @@ from src.graph.nodes import (
 from src.graph.edges import route_after_input_guard, should_continue
 
 
-def build_graph() -> StateGraph:
+def build_graph() -> CompiledStateGraph:
     workflow = StateGraph(AgentState)
 
     workflow.add_node("input_guardrail", input_guardrail_node)

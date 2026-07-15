@@ -50,7 +50,7 @@ def _get_semantic_splitter() -> SemanticSplitterNodeParser:
 def ingest_and_chunk(file_path: str | Path) -> LingestedDocument:
     try:
         reader = PDFReader()
-        docs = reader.load_data(file=str(file_path))
+        docs = reader.load_data(file=Path(str(file_path)))
     except Exception as e:
         raise IngestionError(f"LlamaIndex PDF ingestion failed: {e}") from e
 
@@ -84,12 +84,12 @@ def ingest_and_chunk(file_path: str | Path) -> LingestedDocument:
     for i, node in enumerate(nodes):
         title = node.metadata.get("section_title")
         if not title:
-            preview = node.text.strip()[:60].replace("\n", " ")
+            preview = node.get_content().strip()[:60].replace("\n", " ")
             title = f"Section {i + 1}: {preview}..."
 
         node_dicts.append({
             "title": title,
-            "content": node.text,
+            "content": node.get_content(),
             "page_number": node.metadata.get("page_number", 0),
             "node_id": node.node_id,
         })

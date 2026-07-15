@@ -55,11 +55,12 @@ def input_guardrail_node(state: AgentState) -> dict:
 
 def rejection_node(state: AgentState) -> dict:
     logger.warning("node.rejection", doc_id=state["document_id"], reason=state.get("input_security"))
+    sec = state.get("input_security") or {}
     return {
         "audit_result": {
             "document_id": state["document_id"],
             "status": "rejected",
-            "error": state.get("input_security", {}).get("issues", ["Input rejected by guardrail"]),
+            "error": sec.get("issues", ["Input rejected by guardrail"]),
         }
     }
 

@@ -18,6 +18,7 @@ from src.database.models import (
 from src.database.session import get_session
 from src.config import cfg
 from src.graph.graph import build_graph
+from src.graph.state import AgentState
 
 import structlog
 
@@ -105,7 +106,7 @@ async def run_audit(
 
     graph = get_graph_app()
 
-    initial_state = {
+    initial_state: AgentState = {
         "document_id": document_id,
         "filename": document.filename,
         "storage_path": document.storage_path,

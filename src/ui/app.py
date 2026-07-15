@@ -1,5 +1,6 @@
 import uuid
 import asyncio
+from pathlib import Path
 from datetime import datetime
 
 import chainlit as cl
@@ -11,6 +12,7 @@ from src.database.session import async_session_factory, engine
 from src.database.models import Base, LeaseDocument, LeaseExtraction, MathValidation, ComplianceFlag, AuditStatus
 from src.ingestion.storage import save_file
 from src.graph.graph import build_graph
+from src.graph.state import AgentState
 from src.retrieval.hybrid_retriever import get_hybrid_retriever
 from src.core.llamaindex_setup import setup_llamaindex
 from src.core.logging import setup_logging
@@ -176,7 +178,7 @@ async def on_upload(action: cl.Action):
         return
 
     pdf = files[0]
-    content = pdf.content
+    content = Path(pdf.path).read_bytes()
     blob_name = f"leases/{datetime.utcnow().strftime('%Y/%m/%d')}/{uuid.uuid4()}_{pdf.name}"
     storage_path = save_file(content, blob_name)
 
@@ -389,7 +391,7 @@ async def _run_audit_for_document(doc_id: str):
 
     graph = _get_graph()
 
-    initial_state = {
+    initial_state: AgentState = {
         "document_id": doc_id,
         "filename": doc.filename,
         "storage_path": doc.storage_path,

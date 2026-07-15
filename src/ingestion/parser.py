@@ -2,7 +2,7 @@ import hashlib
 from pathlib import Path
 from typing import BinaryIO
 
-import fitz
+import fitz  # type: ignore[import-untyped]
 
 from src.core.exceptions import IngestionError
 

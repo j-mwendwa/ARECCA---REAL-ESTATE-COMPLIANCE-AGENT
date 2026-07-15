@@ -83,9 +83,9 @@ def chunk_by_sections(pages: list[str]) -> list[DocumentSection]:
     return sections
 
 
-def chunk_to_llamaindex_documents(sections: list[DocumentSection]) -> list[dict]:
+def chunk_to_llamaindex_documents(sections: list[DocumentSection]) -> list[dict[str, Any]]:
     from llama_index.core import Document as LLDocument
-    docs: list[LLDocument] = []
+    docs = []
     for sec in sections:
         doc = LLDocument(
             text=sec.content,
@@ -96,4 +96,4 @@ def chunk_to_llamaindex_documents(sections: list[DocumentSection]) -> list[dict]
             },
         )
         docs.append(doc)
-    return docs
+    return [d.to_dict() for d in docs]

@@ -6,7 +6,7 @@ from src.graph.state import AgentState
 
 
 def route_after_input_guard(state: AgentState) -> str:
-    sec = state.get("input_security", {})
+    sec = state.get("input_security") or {}
     decision = sec.get("decision", "safe")
     if decision == "blocked":
         return "rejection_node"
