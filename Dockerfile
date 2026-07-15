@@ -82,16 +82,17 @@ COPY --chown=${APP_USER}:${APP_GROUP} .env.example ${APP_HOME}/.env.example
 # Set Environment Variables to redirect ML Model caches to our writable directory
 ENV HF_HOME=${APP_HOME}/data/cache/huggingface
 ENV FASTEMBED_CACHE_DIR=${APP_HOME}/data/cache/fastembed
+ENV PORT=${APP_PORT}
 
 # Expose application port
 EXPOSE ${APP_PORT}
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl --fail http://localhost:${APP_PORT}/health || exit 1
+    CMD sh -c 'curl --fail http://localhost:${PORT:-8000}/health || exit 1'
 
 # Drop privileges
 USER ${APP_USER}
 
-# Default command - Executes using the installed Python package path
-CMD ["uvicorn", "arecca.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default command - bind to Railway runtime port
+CMD ["sh", "-c", "uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
