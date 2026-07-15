@@ -1,0 +1,11 @@
+[project]
+database = "sqlite"
+
+[UI]
+port = 8501
+
+[meta]
+generated_by = "ARECCA"
+
+[files]
+root_dir = "."
