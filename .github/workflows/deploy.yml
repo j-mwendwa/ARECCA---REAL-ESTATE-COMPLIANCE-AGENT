@@ -355,6 +355,10 @@ jobs:
       name: staging
     permissions:
       id-token: write   # required for azure/login OIDC
+    # Hoist secret to env so it can be checked in step if: conditions
+    # (secrets context is not allowed in step-level if: expressions)
+    env:
+      CHAINLIT_STAGING_APP: ${{ secrets.AZURE_CONTAINERAPP_CHAINLIT_STAGING }}
 
     outputs:
       api_fqdn:      ${{ steps.deploy-api.outputs.fqdn }}
@@ -380,7 +384,7 @@ jobs:
           registryPassword: ${{ secrets.ACR_PASSWORD }}
 
       - name: Deploy Chainlit UI → Azure Container Apps (Staging)
-        if: ${{ secrets.AZURE_CONTAINERAPP_CHAINLIT_STAGING != '' }}
+        if: env.CHAINLIT_STAGING_APP != ''
         id: deploy-chainlit
         uses: azure/container-apps-deploy-action@v2
         with:
@@ -455,6 +459,10 @@ jobs:
       name: production
     permissions:
       id-token: write   # required for azure/login OIDC
+    # Hoist secret to env so it can be checked in step if: conditions
+    # (secrets context is not allowed in step-level if: expressions)
+    env:
+      CHAINLIT_PROD_APP: ${{ secrets.AZURE_CONTAINERAPP_CHAINLIT_PROD }}
 
     steps:
       - name: Checkout
@@ -479,7 +487,7 @@ jobs:
           registryPassword: ${{ secrets.ACR_PASSWORD }}
 
       - name: Deploy Chainlit UI → Azure Container Apps (Production)
-        if: secrets.AZURE_CONTAINERAPP_CHAINLIT_PROD != ''
+        if: env.CHAINLIT_PROD_APP != ''
         id: deploy-chainlit-prod
         uses: azure/container-apps-deploy-action@v2
         with:
