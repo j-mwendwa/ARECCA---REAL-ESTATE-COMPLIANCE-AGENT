@@ -10,6 +10,7 @@ from src.graph.state import AgentState
 from src.graph.guardrails import check_input_security, check_output_security
 from src.graph.tools import validate_rent_schedule
 from src.config import cfg
+from src.core.tracing import traceable
 
 from src.ingestion.llamaindex_pipeline import ingest_and_chunk
 from src.extraction.hf_extractor import extract_lease_terms
@@ -33,6 +34,7 @@ def _resolve_local_path(storage_path: str, doc_id: str) -> str:
     return storage_path
 
 
+@traceable(name="node.input_guardrail")
 def input_guardrail_node(state: AgentState) -> dict:
     logger.info("node.input_guardrail", doc_id=state["document_id"])
     content_bytes = b""
@@ -53,6 +55,7 @@ def input_guardrail_node(state: AgentState) -> dict:
     return {"input_security": sec, "errors": []}
 
 
+@traceable(name="node.rejection")
 def rejection_node(state: AgentState) -> dict:
     logger.warning("node.rejection", doc_id=state["document_id"], reason=state.get("input_security"))
     sec = state.get("input_security") or {}
@@ -65,6 +68,7 @@ def rejection_node(state: AgentState) -> dict:
     }
 
 
+@traceable(name="node.ingest")
 def ingest_node(state: AgentState) -> dict:
     logger.info("node.ingest", doc_id=state["document_id"])
     parsed_path = _resolve_local_path(state["storage_path"], state["document_id"])
@@ -80,6 +84,7 @@ def ingest_node(state: AgentState) -> dict:
     }
 
 
+@traceable(name="node.chunk")
 def chunk_node(state: AgentState) -> dict:
     logger.info("node.chunk", doc_id=state["document_id"])
     sections = state.get("sections")
@@ -92,6 +97,7 @@ def chunk_node(state: AgentState) -> dict:
     return {}
 
 
+@traceable(name="node.extract", run_type="llm")
 def extract_node(state: AgentState) -> dict:
     logger.info("node.extract", doc_id=state["document_id"])
     sections = state.get("sections", [])
@@ -104,6 +110,7 @@ def extract_node(state: AgentState) -> dict:
     }
 
 
+@traceable(name="node.math_validate")
 def math_validate_node(state: AgentState) -> dict:
     logger.info("node.math_validate", doc_id=state["document_id"])
     lease_terms = state.get("lease_terms")
@@ -121,6 +128,7 @@ def math_validate_node(state: AgentState) -> dict:
     return {"math_validation": tool_result}
 
 
+@traceable(name="node.compliance")
 def compliance_node(state: AgentState) -> dict:
     logger.info("node.compliance", doc_id=state["document_id"])
     lease_terms = state.get("lease_terms")
@@ -145,6 +153,7 @@ def compliance_node(state: AgentState) -> dict:
     }}
 
 
+@traceable(name="node.index")
 def index_node(state: AgentState) -> dict:
     logger.info("node.index", doc_id=state["document_id"])
     sections = state.get("sections", [])
@@ -172,6 +181,7 @@ def index_node(state: AgentState) -> dict:
     return {}
 
 
+@traceable(name="node.output_guardrail")
 def output_guardrail_node(state: AgentState) -> dict:
     logger.info("node.output_guardrail", doc_id=state["document_id"])
     sec = check_output_security(
@@ -181,6 +191,7 @@ def output_guardrail_node(state: AgentState) -> dict:
     return {"output_security": sec}
 
 
+@traceable(name="node.report", run_type="llm")
 def report_node(state: AgentState) -> dict:
     logger.info("node.report", doc_id=state["document_id"])
     report = {

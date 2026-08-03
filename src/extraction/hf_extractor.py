@@ -14,6 +14,7 @@ from src.config import cfg
 from src.core.exceptions import ExtractionError
 from src.core.context_assembler import ContextAssembler
 from src.extraction.schemas import LeaseTerms, ExtractionResult, RentSchedule
+from src.core.tracing import traceable
 
 _HF_CFG = cfg.get("llm", {})
 _MODEL = _HF_CFG.get("model", "AdaptLLM/law-llm-7b")
@@ -74,6 +75,7 @@ def _clean_json(text: str) -> str:
     return text
 
 
+@traceable(name="extractor.hf.extract_lease_terms", run_type="llm")
 def extract_lease_terms(
     sections: list[dict[str, Any]],
     document_id: Optional[str] = None,

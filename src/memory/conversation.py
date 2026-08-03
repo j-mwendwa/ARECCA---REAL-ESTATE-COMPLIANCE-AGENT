@@ -6,6 +6,7 @@ import google.generativeai as genai
 
 from src.config import cfg, settings
 from src.core.prompt_manager import load_prompt
+from src.core.tracing import traceable
 
 _DATA_DIR = Path(__file__).parent.parent.parent / "data" / "memory"
 
@@ -28,6 +29,7 @@ def save_summary(document_id: str, summary: str) -> None:
     path.write_text(json.dumps({"summary": summary, "document_id": document_id}), encoding="utf-8")
 
 
+@traceable(name="memory.update_summary", run_type="llm")
 def update_summary(document_id: str, audit_result: dict) -> str:
     previous = load_summary(document_id) or "No prior audit."
 

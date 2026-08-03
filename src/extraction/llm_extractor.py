@@ -7,6 +7,7 @@ import google.generativeai as genai
 from src.config import settings, cfg
 from src.core.exceptions import ExtractionError
 from src.extraction.schemas import LeaseTerms, ExtractionResult, RentSchedule
+from src.core.tracing import traceable
 
 
 _gemini_cfg = cfg.get("gemini", {})
@@ -23,6 +24,7 @@ def _load_extraction_prompt() -> str:
     return "Extract lease terms from the following document sections into a JSON object."
 
 
+@traceable(name="extractor.llm.extract_lease_terms", run_type="llm")
 def extract_lease_terms(sections: list[dict[str, Any]]) -> ExtractionResult:
     genai.configure(api_key=settings.gemini_api_key)
     system_prompt = _load_extraction_prompt()

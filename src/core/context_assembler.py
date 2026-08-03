@@ -11,6 +11,7 @@ from src.core.token_counter import count_tokens, truncate_to_token_limit
 from src.memory.entity_memory import EntityMemory
 from src.memory.conversation import load_summary
 from src.config import cfg
+from src.core.tracing import traceable
 
 logger = structlog.get_logger()
 
@@ -58,6 +59,7 @@ class ContextAssembler:
         self.target_tokens = target_tokens
         self.memory = EntityMemory(document_id) if document_id else None
 
+    @traceable(name="context.assemble")
     def assemble(self, sections: list[dict]) -> AssembledContext:
         system_prompt = load_prompt(self.prompt_name)
 
