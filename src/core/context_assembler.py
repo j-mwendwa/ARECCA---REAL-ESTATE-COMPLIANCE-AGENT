@@ -4,14 +4,15 @@ conversation summary, token counting, and trimming.
 
 Reference: LLM-RAG-PIPELINE / src/core/context_assembler.py
 """
+
 import structlog
 
+from src.config import cfg
 from src.core.prompt_manager import load_prompt
 from src.core.token_counter import count_tokens, truncate_to_token_limit
-from src.memory.entity_memory import EntityMemory
-from src.memory.conversation import load_summary
-from src.config import cfg
 from src.core.tracing import traceable
+from src.memory.conversation import load_summary
+from src.memory.entity_memory import EntityMemory
 
 logger = structlog.get_logger()
 
@@ -38,12 +39,20 @@ class AssembledContext:
             f"<s>[INST] <<SYS>>\n{self.system_prompt}\n<</SYS>>",
         ]
         if self.entity_memory_block:
-            parts.append(f"\n<entity_memory>\n{self.entity_memory_block}\n</entity_memory>")
+            parts.append(
+                f"\n<entity_memory>\n{self.entity_memory_block}\n</entity_memory>"
+            )
         if self.conversation_summary:
-            parts.append(f"\n<conversation_summary>\n{self.conversation_summary}\n</conversation_summary>")
-        parts.append(f"\n\nExtract lease terms from the following document sections.\n\n{self.sections_text}")
+            parts.append(
+                f"\n<conversation_summary>\n{self.conversation_summary}\n</conversation_summary>"
+            )
+        parts.append(
+            f"\n\nExtract lease terms from the following document sections.\n\n{self.sections_text}"
+        )
         parts.append(f"\n\nReturn ONLY valid JSON matching this schema:\n{schema_json}")
-        parts.append("\n\nAlso include 'confidence_score' (0.0-1.0) and 'raw_clauses' (dict).[/INST]")
+        parts.append(
+            "\n\nAlso include 'confidence_score' (0.0-1.0) and 'raw_clauses' (dict).[/INST]"
+        )
         return "".join(parts)
 
 
@@ -94,7 +103,11 @@ class ContextAssembler:
                     + trimmed_tokens
                     + 500
                 )
-                logger.info("context_trimmed", original_tokens=total_tokens + over, trimmed_to=total_tokens)
+                logger.info(
+                    "context_trimmed",
+                    original_tokens=total_tokens + over,
+                    trimmed_to=total_tokens,
+                )
 
         return AssembledContext(
             system_prompt=system_prompt,

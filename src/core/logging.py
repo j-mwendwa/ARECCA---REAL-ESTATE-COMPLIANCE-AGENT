@@ -1,5 +1,6 @@
 import structlog
 from structlog.processors import JSONRenderer, TimeStamper
+
 from src.config import settings
 
 
@@ -10,7 +11,8 @@ def setup_logging() -> None:
             structlog.stdlib.filter_by_level,
             TimeStamper(fmt="iso"),
             structlog.stdlib.add_log_level,
-            structlog.dev.ConsoleRenderer() if settings.app_env == "development"
+            structlog.dev.ConsoleRenderer()
+            if settings.app_env == "development"
             else JSONRenderer(),
         ],
         wrapper_class=structlog.stdlib.BoundLogger,

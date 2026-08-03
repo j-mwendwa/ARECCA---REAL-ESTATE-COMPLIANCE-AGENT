@@ -1,8 +1,6 @@
 import re
 from typing import Any
 
-
-
 _PREFIX = r"(?:#+\s*)?(?:section\s+[\d.]+\s*[.:–—-]?\s*)?(?:article\s+[\d.]+\s*[.:–—-]?\s*)?(?:§\s+[\d.]+\s*[.:–—-]?\s*)?"
 
 LEASE_SECTION_PATTERNS = [
@@ -25,7 +23,13 @@ COMPILED_PATTERNS = [re.compile(p) for p in LEASE_SECTION_PATTERNS]
 
 
 class DocumentSection:
-    def __init__(self, title: str, content: str, page_number: int, section_type: str | None = None) -> None:
+    def __init__(
+        self,
+        title: str,
+        content: str,
+        page_number: int,
+        section_type: str | None = None,
+    ) -> None:
         self.title = title
         self.content = content
         self.page_number = page_number
@@ -61,11 +65,13 @@ def chunk_by_sections(pages: list[str]) -> list[DocumentSection]:
             header = detect_section_header(line)
             if header:
                 if current_lines:
-                    sections.append(DocumentSection(
-                        title=current_title,
-                        content="\n".join(current_lines).strip(),
-                        page_number=current_page,
-                    ))
+                    sections.append(
+                        DocumentSection(
+                            title=current_title,
+                            content="\n".join(current_lines).strip(),
+                            page_number=current_page,
+                        )
+                    )
                 current_title = header
                 current_lines = [line]
                 current_page = page_idx + 1
@@ -74,17 +80,22 @@ def chunk_by_sections(pages: list[str]) -> list[DocumentSection]:
         current_lines.append("")  # page separator
 
     if current_lines:
-        sections.append(DocumentSection(
-            title=current_title,
-            content="\n".join(current_lines).strip(),
-            page_number=current_page,
-        ))
+        sections.append(
+            DocumentSection(
+                title=current_title,
+                content="\n".join(current_lines).strip(),
+                page_number=current_page,
+            )
+        )
 
     return sections
 
 
-def chunk_to_llamaindex_documents(sections: list[DocumentSection]) -> list[dict[str, Any]]:
+def chunk_to_llamaindex_documents(
+    sections: list[DocumentSection],
+) -> list[dict[str, Any]]:
     from llama_index.core import Document as LLDocument
+
     docs = []
     for sec in sections:
         doc = LLDocument(

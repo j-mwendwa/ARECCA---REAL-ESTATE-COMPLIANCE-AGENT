@@ -2,8 +2,10 @@
 High-efficiency math validation tool for rent escalation calculations.
 Uses NumPy vectorization for batch schedule validation.
 """
+
+from typing import Any
+
 import numpy as np
-from typing import Any, Optional
 from langchain_core.tools import tool
 
 from src.config import cfg
@@ -19,8 +21,8 @@ def validate_rent_schedule(
     lease_term_months: int,
     escalation_type: str,
     escalation_rate: float,
-    escalation_cap: Optional[float] = None,
-    stated_schedule: Optional[list[dict]] = None,
+    escalation_cap: float | None = None,
+    stated_schedule: list[dict] | None = None,
 ) -> dict[str, Any]:
     """Validate a lease's rent escalation schedule using deterministic math.
 
@@ -60,25 +62,33 @@ def validate_rent_schedule(
 
     schedule = []
     for i in range(num_years):
-        schedule.append({
-            "year": int(years[i]),
-            "annual_rent": float(projected_annual[i]),
-            "monthly_rent": float(projected_monthly[i]),
-            "escalation_percent": rate,
-        })
+        schedule.append(
+            {
+                "year": int(years[i]),
+                "annual_rent": float(projected_annual[i]),
+                "monthly_rent": float(projected_monthly[i]),
+                "escalation_percent": rate,
+            }
+        )
 
     discrepancies = []
     if stated_schedule:
-        stated_annual = np.array([s["annual_rent"] for s in stated_schedule], dtype=np.float64)
-        diff = np.abs(stated_annual[:num_years] - projected_annual[:len(stated_schedule)])
+        stated_annual = np.array(
+            [s["annual_rent"] for s in stated_schedule], dtype=np.float64
+        )
+        diff = np.abs(
+            stated_annual[:num_years] - projected_annual[: len(stated_schedule)]
+        )
         mismatch_indices = np.where(diff > _TOLERANCE)[0]
         for idx in mismatch_indices:
-            discrepancies.append({
-                "year": int(stated_schedule[idx]["year"]),
-                "stated_annual_rent": float(stated_annual[idx]),
-                "projected_annual_rent": float(projected_annual[idx]),
-                "difference": float(diff[idx]),
-            })
+            discrepancies.append(
+                {
+                    "year": int(stated_schedule[idx]["year"]),
+                    "stated_annual_rent": float(stated_annual[idx]),
+                    "projected_annual_rent": float(projected_annual[idx]),
+                    "difference": float(diff[idx]),
+                }
+            )
 
     return {
         "is_valid": len(discrepancies) == 0,

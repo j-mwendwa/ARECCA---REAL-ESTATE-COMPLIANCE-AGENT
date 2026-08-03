@@ -19,9 +19,11 @@ def test_detect_section_header_case_insensitive():
 def test_chunk_by_sections():
     pages = [
         "This is a preamble paragraph.\n\nSome more intro text.",
-        "Term\nThis lease begins on January 1, 2025 and ends Dec 31, 2027.\n\n"
-        "Base Rent\nThe monthly base rent is $5,000.\n\n"
-        "Late Fee\nA late fee of 5% applies after 10 days.",
+        (
+            "Term\nThis lease begins on January 1, 2025 and ends Dec 31, 2027.\n\n"
+            "Base Rent\nThe monthly base rent is $5,000.\n\n"
+            "Late Fee\nA late fee of 5% applies after 10 days."
+        ),
     ]
     sections = chunk_by_sections(pages)
     assert len(sections) >= 3

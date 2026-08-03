@@ -2,6 +2,7 @@
 Centralized LlamaIndex embedding and global settings configuration.
 Reference: LLM-RAG-PIPELINE / src/core/llamaindex_setup.py
 """
+
 import structlog
 from llama_index.core import Settings
 
@@ -24,6 +25,7 @@ def setup_llamaindex() -> None:
     if not Settings.embed_model:
         if _EMBED_PROVIDER == "huggingface":
             from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+
             Settings.embed_model = HuggingFaceEmbedding(
                 model_name=_EMBED_MODEL,
                 embed_batch_size=32,

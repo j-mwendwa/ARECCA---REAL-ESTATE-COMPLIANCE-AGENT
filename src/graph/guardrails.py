@@ -8,9 +8,9 @@ Optimizations:
   - Early termination on first blocked finding
   - First-chunk-only content scanning (4KB)
 """
+
 import re
 from functools import lru_cache
-from typing import Optional
 
 # ── Injection patterns: single alternation regex ──────────────────────
 _INJECTION_RE = re.compile(
@@ -38,9 +38,9 @@ _MALICIOUS_CONTENT_RE = re.compile(
 )
 
 # ── Blocked extensions (O(1) set lookup) ─────────────────────────────
-_BLOCKED_EXTENSIONS = frozenset({
-    ".exe", ".bat", ".cmd", ".sh", ".ps1", ".vbs", ".js", ".vba", ".scr", ".com"
-})
+_BLOCKED_EXTENSIONS = frozenset(
+    {".exe", ".bat", ".cmd", ".sh", ".ps1", ".vbs", ".js", ".vba", ".scr", ".com"}
+)
 
 # ── Max file size from config (lazy loaded) ──────────────────────────
 _MAX_FILE_SIZE_MB: int | None = None
@@ -50,6 +50,7 @@ def _get_max_size() -> int:
     global _MAX_FILE_SIZE_MB
     if _MAX_FILE_SIZE_MB is None:
         from src.config import cfg
+
         _MAX_FILE_SIZE_MB = cfg.get("storage", {}).get("max_file_size_mb", 50)
     return _MAX_FILE_SIZE_MB
 
@@ -80,7 +81,9 @@ def _cached_input_check(
     if file_size_bytes > max_size_mb * 1024 * 1024:
         return {
             "decision": "blocked",
-            "issues": [f"File exceeds {max_size_mb}MB limit ({file_size_bytes / 1024 / 1024:.1f}MB)"],
+            "issues": [
+                f"File exceeds {max_size_mb}MB limit ({file_size_bytes / 1024 / 1024:.1f}MB)"
+            ],
             "content_hash": content_hash,
             "extension": filename.rsplit(".", 1)[-1] if "." in filename else "",
             "size_bytes": file_size_bytes,
@@ -122,7 +125,7 @@ def invalidate_cache() -> None:
 
 
 # ── Text injection (single alternation regex, no loop) ───────────────
-def check_text_injection(text: str) -> Optional[dict]:
+def check_text_injection(text: str) -> dict | None:
     m = _INJECTION_RE.search(text)
     if m:
         return {
@@ -134,13 +137,15 @@ def check_text_injection(text: str) -> Optional[dict]:
 
 
 # ── Output security (single-pass, early exit) ────────────────────────
-_REQUIRED_FIELDS = frozenset({"lease_start_date", "base_rent_monthly", "lease_term_months"})
+_REQUIRED_FIELDS = frozenset(
+    {"lease_start_date", "base_rent_monthly", "lease_term_months"}
+)
 _RISK_WEIGHTS = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 
 
 def check_output_security(
-    extraction: Optional[dict],
-    compliance_report: Optional[dict],
+    extraction: dict | None,
+    compliance_report: dict | None,
 ) -> dict:
     issues: list[str] = []
     risk: str = "safe"

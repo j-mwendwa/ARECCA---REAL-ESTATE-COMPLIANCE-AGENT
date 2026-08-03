@@ -1,10 +1,9 @@
 from dataclasses import dataclass, field
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from src.config import cfg
 from src.extraction.schemas import LeaseTerms
-
 
 _validation_cfg = cfg.get("validation", {})
 _DECIMALS = _validation_cfg.get("rounding_decimals", 2)
@@ -19,7 +18,9 @@ class ValidationResult:
 
 
 def _round(val: float) -> Decimal:
-    return Decimal(str(val)).quantize(Decimal("0." + "0" * _DECIMALS), rounding=ROUND_HALF_UP)
+    return Decimal(str(val)).quantize(
+        Decimal("0." + "0" * _DECIMALS), rounding=ROUND_HALF_UP
+    )
 
 
 def validate_rent_escalation(lease_terms: LeaseTerms) -> ValidationResult:
@@ -29,7 +30,9 @@ def validate_rent_escalation(lease_terms: LeaseTerms) -> ValidationResult:
         result.is_valid = True
         return result
 
-    base_monthly = _round(lease_terms.base_rent_monthly or (lease_terms.base_rent_annual or 0) / 12)
+    base_monthly = _round(
+        lease_terms.base_rent_monthly or (lease_terms.base_rent_annual or 0) / 12
+    )
     base_annual = base_monthly * 12
     escalation_rate = lease_terms.escalation_rate
     escalation_type = (lease_terms.escalation_type or "").lower()
@@ -39,12 +42,14 @@ def validate_rent_escalation(lease_terms: LeaseTerms) -> ValidationResult:
         result.is_valid = True
         if term_months:
             for year in range(1, (term_months // 12) + 1):
-                result.projected_schedule.append({
-                    "year": year,
-                    "annual_rent": float(base_annual),
-                    "monthly_rent": float(base_monthly),
-                    "escalation_percent": 0.0,
-                })
+                result.projected_schedule.append(
+                    {
+                        "year": year,
+                        "annual_rent": float(base_annual),
+                        "monthly_rent": float(base_monthly),
+                        "escalation_percent": 0.0,
+                    }
+                )
         return result
 
     if escalation_type == "fixed_amount":
@@ -52,15 +57,21 @@ def validate_rent_escalation(lease_terms: LeaseTerms) -> ValidationResult:
         for year in range(1, (term_months // 12) + 1):
             projected_annual = base_annual + (annual_increase * (year - 1))
             projected_monthly = projected_annual / 12
-            result.projected_schedule.append({
-                "year": year,
-                "annual_rent": float(projected_annual),
-                "monthly_rent": float(projected_monthly),
-                "escalation_percent": float(annual_increase),
-            })
+            result.projected_schedule.append(
+                {
+                    "year": year,
+                    "annual_rent": float(projected_annual),
+                    "monthly_rent": float(projected_monthly),
+                    "escalation_percent": float(annual_increase),
+                }
+            )
     elif escalation_type in ("fixed_percentage", "cpi_based"):
         rate = Decimal(str(escalation_rate)) / 100
-        cap = Decimal(str(lease_terms.escalation_cap)) / 100 if lease_terms.escalation_cap else None
+        cap = (
+            Decimal(str(lease_terms.escalation_cap)) / 100
+            if lease_terms.escalation_cap
+            else None
+        )
         for year in range(1, (term_months // 12) + 1):
             if year == 1:
                 projected_annual = base_annual
@@ -68,14 +79,16 @@ def validate_rent_escalation(lease_terms: LeaseTerms) -> ValidationResult:
                 increase = rate
                 if cap:
                     increase = min(rate, cap)
-                projected_annual = projected_annual * (Decimal("1") + increase)
+                projected_annual = projected_annual * (Decimal(1) + increase)
             projected_monthly = projected_annual / 12
-            result.projected_schedule.append({
-                "year": year,
-                "annual_rent": float(projected_annual),
-                "monthly_rent": float(projected_monthly),
-                "escalation_percent": escalation_rate,
-            })
+            result.projected_schedule.append(
+                {
+                    "year": year,
+                    "annual_rent": float(projected_annual),
+                    "monthly_rent": float(projected_monthly),
+                    "escalation_percent": escalation_rate,
+                }
+            )
     else:
         result.is_valid = True
         return result
@@ -88,13 +101,15 @@ def validate_rent_escalation(lease_terms: LeaseTerms) -> ValidationResult:
                 projected_annual = _round(projected["annual_rent"])
                 diff = abs(stated_annual - projected_annual)
                 if diff > _TOLERANCE:
-                    result.discrepancies.append({
-                        "year": stated.year,
-                        "stated_annual_rent": float(stated_annual),
-                        "projected_annual_rent": float(projected_annual),
-                        "difference": float(diff),
-                        "type": "rent_mismatch",
-                    })
+                    result.discrepancies.append(
+                        {
+                            "year": stated.year,
+                            "stated_annual_rent": float(stated_annual),
+                            "projected_annual_rent": float(projected_annual),
+                            "difference": float(diff),
+                            "type": "rent_mismatch",
+                        }
+                    )
 
     result.is_valid = len(result.discrepancies) == 0
     return result

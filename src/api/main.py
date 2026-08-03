@@ -1,19 +1,18 @@
 from contextlib import asynccontextmanager
 
+import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.api.routes import router
 from src.config import settings
+from src.core.llamaindex_setup import setup_llamaindex
 from src.core.logging import setup_logging
 from src.core.tracing import setup_langsmith
-from src.core.llamaindex_setup import setup_llamaindex
-from src.vectordb.qdrant_store import ensure_collection
-from src.database.session import engine
 from src.database.models import Base
-
-import structlog
+from src.database.session import engine
+from src.vectordb.qdrant_store import ensure_collection
 
 logger = structlog.get_logger()
 

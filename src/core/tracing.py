@@ -2,7 +2,9 @@
 LangSmith opt-in tracing setup.
 Reference: LLM-RAG-PIPELINE / src/core/tracing.py
 """
+
 import os
+
 import structlog
 
 from src.config import settings
@@ -19,6 +21,7 @@ def setup_langsmith() -> None:
     else:
         os.environ.setdefault("LANGSMITH_TRACING", "false")
         logger.debug("langsmith_tracing_disabled")
+
 
 def traceable(
     func=None,
@@ -39,12 +42,14 @@ def traceable(
         @traceable
         def my_func(): ...
     """
+
     def decorator(fn):
         try:
             from langsmith import traceable as _ls_traceable  # type: ignore
+
             span_name = name or fn.__qualname__
             return _ls_traceable(name=span_name, run_type=run_type, **kwargs)(fn)
-        except Exception:
+        except ImportError:
             return fn
 
     if func is not None:

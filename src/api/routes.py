@@ -1,29 +1,37 @@
-import uuid
 import hashlib
-from datetime import datetime
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
+import uuid
+from datetime import UTC, datetime
+from typing import Annotated
+
+import structlog
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from llama_index.core import Settings
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas import (
-    UploadResponse, AuditResult, AuditStatusResponse,
-    SearchRequest, SearchResponse, SearchResult,
+    AuditResult,
+    AuditStatusResponse,
+    SearchRequest,
+    SearchResponse,
+    SearchResult,
+    UploadResponse,
 )
+from src.config import cfg
+from src.database.models import (
+    AuditStatus,
+    ComplianceFlag,
+    LeaseDocument,
+    LeaseExtraction,
+    MathValidation,
+)
+from src.database.session import get_session
+from src.graph.graph import build_graph
+from src.graph.state import AgentState
 from src.ingestion.storage import save_file
 from src.retrieval.hybrid_retriever import get_hybrid_retriever
 from src.vectordb.qdrant_store import ensure_collection
-from src.database.models import (
-    LeaseDocument, LeaseExtraction, MathValidation, ComplianceFlag, AuditStatus,
-)
-from src.database.session import get_session
-from src.config import cfg
-from src.graph.graph import build_graph
-from src.graph.state import AgentState
-
-import structlog
-
-from llama_index.core import Settings
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
 logger = structlog.get_logger()
 
@@ -47,19 +55,19 @@ def get_graph_app():
 
 @router.post("/upload", response_model=UploadResponse)
 async def upload_lease(
-    file: UploadFile = File(...),
-    session: AsyncSession = Depends(get_session),
+    file: Annotated[UploadFile, File(...)],
+    session: Annotated[AsyncSession, Depends(get_session)],
 ):
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are accepted")
 
     content = await file.read()
     file_hash = hashlib.sha256(content).hexdigest()
-    blob_name = f"leases/{datetime.utcnow().strftime('%Y/%m/%d')}/{uuid.uuid4()}_{file.filename}"
+    blob_name = f"leases/{datetime.now(UTC).strftime('%Y/%m/%d')}/{uuid.uuid4()}_{file.filename}"
 
     try:
         storage_path = save_file(content, blob_name)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=f"Storage failed: {e}")
 
     doc_id = uuid.uuid4()
@@ -84,7 +92,7 @@ async def upload_lease(
 @router.post("/audit/{document_id}", response_model=AuditResult)
 async def run_audit(
     document_id: str,
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ):
     try:
         doc_uuid = uuid.UUID(document_id)
@@ -126,6 +134,7 @@ async def run_audit(
 
     try:
         import asyncio
+
         final_state = await asyncio.to_thread(graph.invoke, initial_state)
 
         if final_state.get("errors"):
@@ -167,12 +176,12 @@ async def run_audit(
                 session.add(flag_record)
 
         document.status = AuditStatus.completed
-        document.updated_at = datetime.utcnow()
+        document.updated_at = datetime.now(UTC)
         await session.commit()
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         document.status = AuditStatus.failed
         await session.commit()
         raise HTTPException(status_code=500, detail=f"Audit failed: {e}")
@@ -180,7 +189,9 @@ async def run_audit(
     return await _build_audit_result(document, session)
 
 
-async def _build_audit_result(document: LeaseDocument, session: AsyncSession) -> AuditResult:
+async def _build_audit_result(
+    document: LeaseDocument, session: AsyncSession
+) -> AuditResult:
     ext_row = await session.execute(
         select(LeaseExtraction).where(LeaseExtraction.document_id == document.id)
     )
@@ -199,7 +210,9 @@ async def _build_audit_result(document: LeaseDocument, session: AsyncSession) ->
     compliance_report = None
     if flags:
         risk_levels = {"low": 1, "medium": 2, "high": 3, "critical": 4}
-        max_risk = max((f.risk_level for f in flags), key=lambda r: risk_levels.get(r, 0))
+        max_risk = max(
+            (f.risk_level for f in flags), key=lambda r: risk_levels.get(r, 0)
+        )
         high_count = sum(1 for f in flags if f.risk_level in ("high", "critical"))
         compliance_report = {
             "overall_risk_level": max_risk,
@@ -224,13 +237,15 @@ async def _build_audit_result(document: LeaseDocument, session: AsyncSession) ->
         math_validation={
             "is_valid": math.is_valid,
             "details": math.discrepancy_details,
-        } if math else None,
+        }
+        if math
+        else None,
         compliance_report=compliance_report,
     )
 
 
 @router.get("/documents", response_model=list[AuditStatusResponse])
-async def list_documents(session: AsyncSession = Depends(get_session)):
+async def list_documents(session: Annotated[AsyncSession, Depends(get_session)]):
     result = await session.execute(
         select(LeaseDocument).order_by(LeaseDocument.created_at.desc()).limit(100)
     )
@@ -250,7 +265,7 @@ async def list_documents(session: AsyncSession = Depends(get_session)):
 @router.get("/documents/{document_id}", response_model=AuditResult)
 async def get_document_status(
     document_id: str,
-    session: AsyncSession = Depends(get_session),
+    session: Annotated[AsyncSession, Depends(get_session)],
 ):
     try:
         doc_uuid = uuid.UUID(document_id)
@@ -279,12 +294,14 @@ async def search_clauses(request: SearchRequest):
 
     results = []
     for node in nodes:
-        results.append(SearchResult(
-            section_title=node.metadata.get("section_title", "Unknown"),
-            content=node.text[:500],
-            score=node.score or 0.0,
-            page_number=node.metadata.get("page_number"),
-        ))
+        results.append(
+            SearchResult(
+                section_title=node.metadata.get("section_title", "Unknown"),
+                content=node.text[:500],
+                score=node.score or 0.0,
+                page_number=node.metadata.get("page_number"),
+            )
+        )
 
     return SearchResponse(query=request.query, results=results)
 

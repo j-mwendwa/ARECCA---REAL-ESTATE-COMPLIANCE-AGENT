@@ -1,5 +1,5 @@
-from src.ingestion.llamaindex_pipeline import ingest_and_chunk, LingestedDocument
 from src.core.exceptions import IngestionError
+from src.ingestion.llamaindex_pipeline import LingestedDocument, ingest_and_chunk
 
 
 def test_ingest_nonexistent():
@@ -15,7 +15,14 @@ def test_lingested_document():
         text="lease content",
         pages=["page 1"],
         metadata={"page_count": 1},
-        nodes=[{"title": "Section 1", "content": "lease content", "page_number": 1, "node_id": "n1"}],
+        nodes=[
+            {
+                "title": "Section 1",
+                "content": "lease content",
+                "page_number": 1,
+                "node_id": "n1",
+            }
+        ],
     )
     assert doc.page_count == 1
     assert isinstance(doc.content_hash, str) and len(doc.content_hash) == 64

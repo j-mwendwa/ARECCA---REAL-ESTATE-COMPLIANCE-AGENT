@@ -2,8 +2,8 @@
 Versioned prompt loader.
 Reference: LLM-RAG-PIPELINE / src/core/prompt_manager.py
 """
+
 from pathlib import Path
-from typing import Optional
 
 from src.config import cfg
 
@@ -14,7 +14,7 @@ _VERSION = cfg.get("prompts", {}).get("version", "v1")
 _cache: dict[str, str] = {}
 
 
-def load_prompt(name: str, version: Optional[str] = None) -> str:
+def load_prompt(name: str, version: str | None = None) -> str:
     ver = version or _VERSION
     key = f"{name}_{ver}"
 

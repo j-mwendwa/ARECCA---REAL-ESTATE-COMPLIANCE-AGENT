@@ -2,6 +2,7 @@
 Token counter using tiktoken cl100k_base.
 Reference: LLM-RAG-PIPELINE / src/core/token_counter.py
 """
+
 import tiktoken
 
 _ENCODING = "cl100k_base"

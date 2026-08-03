@@ -1,11 +1,10 @@
-from llama_index.core import Settings
-from llama_index.core.retrievers import VectorIndexRetriever
-from llama_index.core import VectorStoreIndex
-from llama_index.core.query_engine import RetrieverQueryEngine
+from llama_index.core import Settings, VectorStoreIndex
 from llama_index.core.postprocessor import SimilarityPostprocessor
+from llama_index.core.query_engine import RetrieverQueryEngine
+from llama_index.core.retrievers import VectorIndexRetriever
+
 from src.config import cfg
 from src.vectordb.qdrant_store import get_qdrant_vector_store
-
 
 _retrieval_cfg = cfg.get("retrieval", {})
 TOP_K = _retrieval_cfg.get("top_k", 5)

@@ -4,24 +4,24 @@ LangGraph nodes for the ARECCA audit pipeline.
 Each node is a callable that receives AgentState and returns a partial state update.
 Reference: LLM-RAG-PIPELINE / src/graph/nodes.py
 """
+
 from pathlib import Path
 
-from src.graph.state import AgentState
-from src.graph.guardrails import check_input_security, check_output_security
-from src.graph.tools import validate_rent_schedule
-from src.config import cfg
-from src.core.tracing import traceable
-
-from src.ingestion.llamaindex_pipeline import ingest_and_chunk
-from src.extraction.hf_extractor import extract_lease_terms
-from src.compliance.engine import run_compliance_check
-
-from llama_index.core import Settings, Document as LLDocument
+import structlog
+from llama_index.core import Document as LLDocument
+from llama_index.core import Settings
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.node_parser import SentenceSplitter
-from src.vectordb.qdrant_store import get_qdrant_vector_store
 
-import structlog
+from src.compliance.engine import run_compliance_check
+from src.config import cfg
+from src.core.tracing import traceable
+from src.extraction.hf_extractor import extract_lease_terms
+from src.graph.guardrails import check_input_security, check_output_security
+from src.graph.state import AgentState
+from src.graph.tools import validate_rent_schedule
+from src.ingestion.llamaindex_pipeline import ingest_and_chunk
+from src.vectordb.qdrant_store import get_qdrant_vector_store
 
 logger = structlog.get_logger()
 
@@ -57,7 +57,11 @@ def input_guardrail_node(state: AgentState) -> dict:
 
 @traceable(name="node.rejection")
 def rejection_node(state: AgentState) -> dict:
-    logger.warning("node.rejection", doc_id=state["document_id"], reason=state.get("input_security"))
+    logger.warning(
+        "node.rejection",
+        doc_id=state["document_id"],
+        reason=state.get("input_security"),
+    )
     sec = state.get("input_security") or {}
     return {
         "audit_result": {
@@ -117,14 +121,16 @@ def math_validate_node(state: AgentState) -> dict:
     if not lease_terms:
         return {"errors": ["No lease terms to validate"]}
     stated = lease_terms.get("rent_schedule")
-    tool_result = validate_rent_schedule.invoke({
-        "base_rent_monthly": lease_terms.get("base_rent_monthly") or 0,
-        "lease_term_months": lease_terms.get("lease_term_months") or 12,
-        "escalation_type": lease_terms.get("escalation_type") or "none",
-        "escalation_rate": lease_terms.get("escalation_rate") or 0.0,
-        "escalation_cap": lease_terms.get("escalation_cap"),
-        "stated_schedule": stated,
-    })
+    tool_result = validate_rent_schedule.invoke(
+        {
+            "base_rent_monthly": lease_terms.get("base_rent_monthly") or 0,
+            "lease_term_months": lease_terms.get("lease_term_months") or 12,
+            "escalation_type": lease_terms.get("escalation_type") or "none",
+            "escalation_rate": lease_terms.get("escalation_rate") or 0.0,
+            "escalation_cap": lease_terms.get("escalation_cap"),
+            "stated_schedule": stated,
+        }
+    )
     return {"math_validation": tool_result}
 
 
@@ -135,22 +141,25 @@ def compliance_node(state: AgentState) -> dict:
     if not lease_terms:
         return {"errors": ["No lease terms for compliance check"]}
     from src.extraction.schemas import LeaseTerms
+
     terms_obj = LeaseTerms(**lease_terms)
     report = run_compliance_check(state["document_id"], terms_obj)
-    return {"compliance_report": {
-        "overall_risk_level": report.overall_risk_level,
-        "flag_count": len(report.flags),
-        "flags": [
-            {
-                "rule_id": f.rule_id,
-                "rule_name": f.rule_name,
-                "risk_level": f.risk_level,
-                "description": f.description,
-            }
-            for f in report.flags
-        ],
-        "summary": report.summary,
-    }}
+    return {
+        "compliance_report": {
+            "overall_risk_level": report.overall_risk_level,
+            "flag_count": len(report.flags),
+            "flags": [
+                {
+                    "rule_id": f.rule_id,
+                    "rule_name": f.rule_name,
+                    "risk_level": f.risk_level,
+                    "description": f.description,
+                }
+                for f in report.flags
+            ],
+            "summary": report.summary,
+        }
+    }
 
 
 @traceable(name="node.index")
@@ -208,7 +217,10 @@ def report_node(state: AgentState) -> dict:
     }
     try:
         from src.memory.conversation import update_summary
+
         update_summary(state["document_id"], report)
-    except Exception as e:
-        logger.warning("node.report.summary_failed", doc_id=state["document_id"], error=str(e))
+    except Exception as e:  # noqa: BLE001
+        logger.warning(
+            "node.report.summary_failed", doc_id=state["document_id"], error=str(e)
+        )
     return {"audit_result": report}

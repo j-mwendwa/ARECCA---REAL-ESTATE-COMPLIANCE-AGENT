@@ -1,5 +1,5 @@
-from src.ingestion.parser import parse_pdf, ParsedDocument
 from src.core.exceptions import IngestionError
+from src.ingestion.parser import ParsedDocument, parse_pdf
 
 
 def test_parse_pdf_nonexistent():

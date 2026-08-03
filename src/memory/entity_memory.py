@@ -2,11 +2,10 @@
 Per-document durable key-value fact storage.
 Reference: LLM-RAG-PIPELINE / src/memory/entity_memory.py
 """
+
 import json
 import os
 from pathlib import Path
-from typing import Optional
-
 
 _DATA_DIR = Path(__file__).parent.parent.parent / "data" / "memory"
 _ENCRYPTION_KEY = os.getenv("MEMORY_ENCRYPTION_KEY", "")
@@ -20,9 +19,14 @@ def _get_fernet():
     if _fernet is None and _ENCRYPTION_KEY:
         try:
             from cryptography.fernet import Fernet
-            key = _ENCRYPTION_KEY.encode() if _ENCRYPTION_KEY.endswith("=") else Fernet.generate_key()
+
+            key = (
+                _ENCRYPTION_KEY.encode()
+                if _ENCRYPTION_KEY.endswith("=")
+                else Fernet.generate_key()
+            )
             _fernet = Fernet(key)
-        except Exception:
+        except ImportError:
             _fernet = None
     return _fernet
 
@@ -46,7 +50,7 @@ class EntityMemory:
         if raw.startswith(_ENCRYPTED_PREFIX):
             f = _get_fernet()
             if f:
-                raw = f.decrypt(raw[len(_ENCRYPTED_PREFIX):].encode()).decode()
+                raw = f.decrypt(raw[len(_ENCRYPTED_PREFIX) :].encode()).decode()
             else:
                 raise RuntimeError("Encrypted memory but no encryption key available")
         self._facts = json.loads(raw)
@@ -71,7 +75,7 @@ class EntityMemory:
     def all(self) -> dict[str, str]:
         return dict(self._facts)
 
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str | None:
         return self._facts.get(key)
 
     def clear(self) -> None:

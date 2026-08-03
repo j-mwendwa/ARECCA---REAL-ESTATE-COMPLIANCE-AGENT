@@ -4,24 +4,30 @@ from typing import Any
 
 import google.generativeai as genai
 
-from src.config import settings, cfg
+from src.config import cfg, settings
 from src.core.exceptions import ExtractionError
-from src.extraction.schemas import LeaseTerms, ExtractionResult, RentSchedule
 from src.core.tracing import traceable
-
+from src.extraction.schemas import ExtractionResult, LeaseTerms, RentSchedule
 
 _gemini_cfg = cfg.get("gemini", {})
 _TARGET_MODEL = _gemini_cfg.get("model", "gemini-2.0-flash")
 _TEMPERATURE = _gemini_cfg.get("temperature", 0.0)
 _MAX_TOKENS = _gemini_cfg.get("max_tokens", 4096)
 
-_PROMPT_PATH = Path(__file__).parent.parent.parent / "prompts" / "extraction" / "lease_extraction_v1.md"
+_PROMPT_PATH = (
+    Path(__file__).parent.parent.parent
+    / "prompts"
+    / "extraction"
+    / "lease_extraction_v1.md"
+)
 
 
 def _load_extraction_prompt() -> str:
     if _PROMPT_PATH.exists():
         return _PROMPT_PATH.read_text()
-    return "Extract lease terms from the following document sections into a JSON object."
+    return (
+        "Extract lease terms from the following document sections into a JSON object."
+    )
 
 
 @traceable(name="extractor.llm.extract_lease_terms", run_type="llm")
@@ -71,8 +77,10 @@ def extract_lease_terms(sections: list[dict[str, Any]]) -> ExtractionResult:
     lease_terms_data = raw.get("lease_terms", raw)
     lease_terms = LeaseTerms(**lease_terms_data)
 
-    if "rent_schedule" in lease_terms_data and lease_terms_data["rent_schedule"]:
-        lease_terms.rent_schedule = [RentSchedule(**rs) for rs in lease_terms_data["rent_schedule"]]
+    if lease_terms_data.get("rent_schedule"):
+        lease_terms.rent_schedule = [
+            RentSchedule(**rs) for rs in lease_terms_data["rent_schedule"]
+        ]
 
     confidence = raw.get("confidence_score", 0.0)
     raw_clauses = raw.get("raw_clauses", {})

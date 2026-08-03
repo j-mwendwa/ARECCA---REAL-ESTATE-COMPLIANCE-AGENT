@@ -24,7 +24,11 @@ class ParsedDocument:
 
 def parse_pdf(file_path: str | Path | BinaryIO) -> ParsedDocument:
     try:
-        doc = fitz.open(stream=file_path, filetype="pdf") if isinstance(file_path, (BinaryIO,)) else fitz.open(file_path)
+        doc = (
+            fitz.open(stream=file_path, filetype="pdf")
+            if isinstance(file_path, (BinaryIO,))
+            else fitz.open(file_path)
+        )
     except Exception as e:
         raise IngestionError(f"Failed to open PDF: {e}") from e
 

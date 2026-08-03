@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from src.extraction.schemas import LeaseTerms
 
@@ -71,12 +71,32 @@ def _check_habitability_waiver() -> str | None:
 
 
 RULES = [
-    ComplianceRule("LATE_FEE_CAP", "Late Fee Cap Check",
-                   "Verifies late fees do not exceed legal limits", "high", _check_late_fee_cap),
-    ComplianceRule("GRACE_PERIOD", "Grace Period Check",
-                   "Verifies minimum grace period exists", "medium", _check_grace_period),
-    ComplianceRule("DEPOSIT_CAP", "Security Deposit Cap",
-                   "Verifies deposit does not exceed legal limits", "high", _check_security_deposit_cap),
-    ComplianceRule("ESCALATION_DISCLOSURE", "Rent Escalation Disclosure",
-                   "Verifies escalation terms are fully disclosed", "medium", _check_rent_escalation_disclosure),
+    ComplianceRule(
+        "LATE_FEE_CAP",
+        "Late Fee Cap Check",
+        "Verifies late fees do not exceed legal limits",
+        "high",
+        _check_late_fee_cap,
+    ),
+    ComplianceRule(
+        "GRACE_PERIOD",
+        "Grace Period Check",
+        "Verifies minimum grace period exists",
+        "medium",
+        _check_grace_period,
+    ),
+    ComplianceRule(
+        "DEPOSIT_CAP",
+        "Security Deposit Cap",
+        "Verifies deposit does not exceed legal limits",
+        "high",
+        _check_security_deposit_cap,
+    ),
+    ComplianceRule(
+        "ESCALATION_DISCLOSURE",
+        "Rent Escalation Disclosure",
+        "Verifies escalation terms are fully disclosed",
+        "medium",
+        _check_rent_escalation_disclosure,
+    ),
 ]

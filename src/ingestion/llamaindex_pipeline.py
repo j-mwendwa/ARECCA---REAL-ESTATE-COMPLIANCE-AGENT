@@ -5,6 +5,7 @@ Replaces raw PyMuPDF parsing + regex chunking with:
   - LlamaIndex PDFReader for document ingestion
   - SemanticSplitterNodeParser for embedding-based semantic chunking
 """
+
 import hashlib
 from pathlib import Path
 from typing import Any
@@ -18,7 +19,9 @@ from src.core.exceptions import IngestionError
 
 
 class LingestedDocument:
-    def __init__(self, text: str, pages: list[str], metadata: dict, nodes: list[dict]) -> None:
+    def __init__(
+        self, text: str, pages: list[str], metadata: dict, nodes: list[dict]
+    ) -> None:
         self.text = text
         self.pages = pages
         self.metadata = metadata
@@ -87,12 +90,14 @@ def ingest_and_chunk(file_path: str | Path) -> LingestedDocument:
             preview = node.get_content().strip()[:60].replace("\n", " ")
             title = f"Section {i + 1}: {preview}..."
 
-        node_dicts.append({
-            "title": title,
-            "content": node.get_content(),
-            "page_number": node.metadata.get("page_number", 0),
-            "node_id": node.node_id,
-        })
+        node_dicts.append(
+            {
+                "title": title,
+                "content": node.get_content(),
+                "page_number": node.metadata.get("page_number", 0),
+                "node_id": node.node_id,
+            }
+        )
 
     return LingestedDocument(
         text=full_text,

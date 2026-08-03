@@ -1,5 +1,5 @@
-from src.validation.math_validator import validate_rent_escalation
 from src.extraction.schemas import LeaseTerms, RentSchedule
+from src.validation.math_validator import validate_rent_escalation
 
 
 def test_fixed_percentage_valid():
@@ -10,9 +10,15 @@ def test_fixed_percentage_valid():
         escalation_rate=3.0,
         escalation_frequency_months=12,
         rent_schedule=[
-            RentSchedule(year=1, annual_rent=60000.0, monthly_rent=5000.0, escalation_percent=0.0),
-            RentSchedule(year=2, annual_rent=61800.0, monthly_rent=5150.0, escalation_percent=3.0),
-            RentSchedule(year=3, annual_rent=63654.0, monthly_rent=5304.5, escalation_percent=3.0),
+            RentSchedule(
+                year=1, annual_rent=60000.0, monthly_rent=5000.0, escalation_percent=0.0
+            ),
+            RentSchedule(
+                year=2, annual_rent=61800.0, monthly_rent=5150.0, escalation_percent=3.0
+            ),
+            RentSchedule(
+                year=3, annual_rent=63654.0, monthly_rent=5304.5, escalation_percent=3.0
+            ),
         ],
     )
     result = validate_rent_escalation(terms)
@@ -27,8 +33,12 @@ def test_fixed_percentage_mismatch():
         escalation_rate=3.0,
         escalation_frequency_months=12,
         rent_schedule=[
-            RentSchedule(year=1, annual_rent=60000.0, monthly_rent=5000.0, escalation_percent=0.0),
-            RentSchedule(year=2, annual_rent=63000.0, monthly_rent=5250.0, escalation_percent=3.0),
+            RentSchedule(
+                year=1, annual_rent=60000.0, monthly_rent=5000.0, escalation_percent=0.0
+            ),
+            RentSchedule(
+                year=2, annual_rent=63000.0, monthly_rent=5250.0, escalation_percent=3.0
+            ),
         ],
     )
     result = validate_rent_escalation(terms)
@@ -44,8 +54,15 @@ def test_fixed_amount_valid():
         escalation_rate=2400.0,
         escalation_frequency_months=12,
         rent_schedule=[
-            RentSchedule(year=1, annual_rent=48000.0, monthly_rent=4000.0, escalation_percent=0.0),
-            RentSchedule(year=2, annual_rent=50400.0, monthly_rent=4200.0, escalation_percent=2400.0),
+            RentSchedule(
+                year=1, annual_rent=48000.0, monthly_rent=4000.0, escalation_percent=0.0
+            ),
+            RentSchedule(
+                year=2,
+                annual_rent=50400.0,
+                monthly_rent=4200.0,
+                escalation_percent=2400.0,
+            ),
         ],
     )
     result = validate_rent_escalation(terms)

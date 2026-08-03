@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from typing import Optional
 
 import google.generativeai as genai
 
@@ -16,7 +15,7 @@ def _summary_path(document_id: str) -> Path:
     return _DATA_DIR / f"{document_id}_summary.json"
 
 
-def load_summary(document_id: str) -> Optional[str]:
+def load_summary(document_id: str) -> str | None:
     path = _summary_path(document_id)
     if path.exists():
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -26,7 +25,9 @@ def load_summary(document_id: str) -> Optional[str]:
 
 def save_summary(document_id: str, summary: str) -> None:
     path = _summary_path(document_id)
-    path.write_text(json.dumps({"summary": summary, "document_id": document_id}), encoding="utf-8")
+    path.write_text(
+        json.dumps({"summary": summary, "document_id": document_id}), encoding="utf-8"
+    )
 
 
 @traceable(name="memory.update_summary", run_type="llm")

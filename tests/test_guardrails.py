@@ -1,4 +1,8 @@
-from src.graph.guardrails import check_input_security, check_output_security, check_text_injection
+from src.graph.guardrails import (
+    check_input_security,
+    check_output_security,
+    check_text_injection,
+)
 
 
 def test_input_guardrail_safe():
@@ -62,7 +66,10 @@ def test_output_guardrail_low_confidence():
 
 def test_output_guardrail_high_risk():
     result = check_output_security(
-        extraction={"confidence_score": 0.9, "lease_terms": {"base_rent_monthly": 5000}},
+        extraction={
+            "confidence_score": 0.9,
+            "lease_terms": {"base_rent_monthly": 5000},
+        },
         compliance_report={
             "overall_risk_level": "high",
             "flags": [{"rule_id": "LATE_FEE", "risk_level": "high"}],

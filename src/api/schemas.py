@@ -1,6 +1,7 @@
 from datetime import datetime
-from pydantic import BaseModel, Field
 from typing import Any
+
+from pydantic import BaseModel, Field
 
 
 class UploadResponse(BaseModel):
@@ -31,7 +32,9 @@ class AuditStatusResponse(BaseModel):
 class SearchRequest(BaseModel):
     query: str = Field(description="Search query for lease clause retrieval")
     top_k: int = Field(default=5, description="Number of results to return")
-    alpha: float = Field(default=0.3, description="Hybrid search alpha (0=dense, 1=sparse)")
+    alpha: float = Field(
+        default=0.3, description="Hybrid search alpha (0=dense, 1=sparse)"
+    )
 
 
 class SearchResult(BaseModel):

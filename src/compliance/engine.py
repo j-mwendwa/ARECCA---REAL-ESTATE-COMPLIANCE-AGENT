@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
-from src.extraction.schemas import LeaseTerms
 from src.compliance.rules import RULES
+from src.extraction.schemas import LeaseTerms
 
 
 @dataclass
@@ -30,15 +30,19 @@ def run_compliance_check(document_id: str, lease_terms: LeaseTerms) -> Complianc
     for rule in RULES:
         violation = rule.check_fn(lease_terms)
         if violation:
-            flags.append(ComplianceFlag(
-                rule_id=rule.rule_id,
-                rule_name=rule.name,
-                risk_level=rule.risk_level,
-                description=violation,
-            ))
+            flags.append(
+                ComplianceFlag(
+                    rule_id=rule.rule_id,
+                    rule_name=rule.name,
+                    risk_level=rule.risk_level,
+                    description=violation,
+                )
+            )
 
     if flags:
-        max_risk = max(flags, key=lambda f: RISK_WEIGHTS.get(f.risk_level, 0)).risk_level
+        max_risk = max(
+            flags, key=lambda f: RISK_WEIGHTS.get(f.risk_level, 0)
+        ).risk_level
         overall = max_risk
     else:
         overall = "low"

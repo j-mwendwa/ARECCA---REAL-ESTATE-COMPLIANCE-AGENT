@@ -1,5 +1,7 @@
 """Benchmarks proving guardrail efficiency improvements."""
+
 import time
+
 from src.graph.guardrails import (
     check_input_security,
     check_output_security,
@@ -37,7 +39,11 @@ def test_input_guard_early_exit_on_oversize():
 
 def test_input_guard_content_scan_single_pass():
     """Single alternation regex should be faster than iterating patterns."""
-    payload = b"normal pdf content " * 100 + b"<script>evil</script>" + b" more content " * 100
+    payload = (
+        b"normal pdf content " * 100
+        + b"<script>evil</script>"
+        + b" more content " * 100
+    )
     start = time.monotonic()
     result = check_input_security(
         filename="doc.pdf",

@@ -1,6 +1,7 @@
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.exceptions import UnexpectedResponse
-from src.config import settings, cfg
+
+from src.config import cfg, settings
 
 COLLECTION_NAME = "lease_sections"
 VECTOR_SIZE = cfg.get("embedding", {}).get("dimensions", 768)
@@ -55,6 +56,7 @@ def ensure_collection(client: QdrantClient | None = None) -> None:
 
 def get_qdrant_vector_store():
     from llama_index.vector_stores.qdrant import QdrantVectorStore
+
     return QdrantVectorStore(
         collection_name=COLLECTION_NAME,
         url=settings.qdrant_url,

@@ -6,22 +6,24 @@ input_guardrail → ingest → chunk → extract → math_validate → complianc
 
 Reference: LLM-RAG-PIPELINE / src/graph/graph.py
 """
-from langgraph.graph import StateGraph, END
+
+from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from src.graph.state import AgentState
+
+from src.graph.edges import route_after_input_guard, should_continue
 from src.graph.nodes import (
-    input_guardrail_node,
-    rejection_node,
-    ingest_node,
     chunk_node,
-    extract_node,
-    math_validate_node,
     compliance_node,
+    extract_node,
     index_node,
+    ingest_node,
+    input_guardrail_node,
+    math_validate_node,
     output_guardrail_node,
+    rejection_node,
     report_node,
 )
-from src.graph.edges import route_after_input_guard, should_continue
+from src.graph.state import AgentState
 
 
 def build_graph() -> CompiledStateGraph:

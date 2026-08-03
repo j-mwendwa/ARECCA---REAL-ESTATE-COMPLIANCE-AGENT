@@ -5,16 +5,18 @@ Default: AdaptLLM/law-llm-7b (Mistral-7B fine-tuned on legal text).
 Uses ContextAssembler for prompt assembly with entity memory + conversation summary,
 token counting, and context trimming.
 """
+
 import json
-from typing import Any, Optional
+from typing import Any
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+
 from src.config import cfg
-from src.core.exceptions import ExtractionError
 from src.core.context_assembler import ContextAssembler
-from src.extraction.schemas import LeaseTerms, ExtractionResult, RentSchedule
+from src.core.exceptions import ExtractionError
 from src.core.tracing import traceable
+from src.extraction.schemas import ExtractionResult, LeaseTerms, RentSchedule
 
 _HF_CFG = cfg.get("llm", {})
 _MODEL = _HF_CFG.get("model", "AdaptLLM/law-llm-7b")
@@ -61,24 +63,21 @@ def _load_model():
 
 def _clean_json(text: str) -> str:
     text = text.strip()
-    if text.startswith("```json"):
-        text = text[len("```json"):]
-    if text.startswith("```"):
-        text = text[3:]
-    if text.endswith("```"):
-        text = text[:-3]
+    text = text.removeprefix("```json")
+    text = text.removeprefix("```")
+    text = text.removesuffix("```")
     text = text.strip()
     start = text.find("{")
     end = text.rfind("}")
     if start != -1 and end != -1 and end > start:
-        text = text[start:end + 1]
+        text = text[start : end + 1]
     return text
 
 
 @traceable(name="extractor.hf.extract_lease_terms", run_type="llm")
 def extract_lease_terms(
     sections: list[dict[str, Any]],
-    document_id: Optional[str] = None,
+    document_id: str | None = None,
 ) -> ExtractionResult:
     gen = _load_model()
     schema_json = json.dumps(LeaseTerms.model_json_schema(), indent=2)
@@ -113,8 +112,10 @@ def extract_lease_terms(
     lease_terms_data = raw.get("lease_terms", raw)
     lease_terms = LeaseTerms(**lease_terms_data)
 
-    if "rent_schedule" in lease_terms_data and lease_terms_data["rent_schedule"]:
-        lease_terms.rent_schedule = [RentSchedule(**rs) for rs in lease_terms_data["rent_schedule"]]
+    if lease_terms_data.get("rent_schedule"):
+        lease_terms.rent_schedule = [
+            RentSchedule(**rs) for rs in lease_terms_data["rent_schedule"]
+        ]
 
     confidence = raw.get("confidence_score", 0.0)
     raw_clauses = raw.get("raw_clauses", {})
