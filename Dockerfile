@@ -1,98 +1,183 @@
-# =============================================================================
-# # ARECCA — Automated Real Estate Contract Compliance Auditor
-# Multi-stage Dockerfile
-# =============================================================================
+# ─────────────────────────────────────────────────────────────────────────────
+# ARECCA — Automated Real Estate Contract Compliance Auditor
+# Multi-Stage Dockerfile
+#
+# Stages:
+#   1. base        — shared Python slim base with system deps
+#   2. builder     — installs Python packages into a virtual-env (build cache)
+#   3. api         — production FastAPI/Uvicorn runtime  (default target)
+#   4. chainlit    — production Chainlit UI runtime
+#   5. dev         — development image with hot-reload + dev extras
+#
+# Build examples:
+#   docker build --target api      -t arecca:api .
+#   docker build --target chainlit -t arecca:chainlit .
+#   docker build --target dev      -t arecca:dev .
+# ─────────────────────────────────────────────────────────────────────────────
 
-# ── Stage 1: Builder ──────────────────────────────────────────────────────────
-FROM python:3.11-slim-bookworm AS builder
+ARG PYTHON_VERSION=3.11
+ARG APP_USER=appuser
+ARG APP_UID=1001
 
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# ══════════════════════════════════════════════════════════════════════════════
+# Stage 1 — base: slim Python + OS packages
+# ══════════════════════════════════════════════════════════════════════════════
+FROM python:${PYTHON_VERSION}-slim AS base
 
-ARG DEBIAN_FRONTEND=noninteractive
+ARG APP_USER
+ARG APP_UID
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
+
+# OS-level dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    build-essential \
-    libffi-dev \
-    libssl-dev \
-    git \
+        curl \
+        libmagic1 \
+        libgomp1 \
+        libglib2.0-0 \
+        libgl1-mesa-glx \
     && rm -rf /var/lib/apt/lists/*
+
+# Non-root user created once; reused across runtime stages
+RUN groupadd --gid ${APP_UID} ${APP_USER} \
+    && useradd  --uid ${APP_UID} --gid ${APP_UID} \
+                --shell /bin/bash --create-home ${APP_USER}
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Stage 2 — builder: install all Python deps into an isolated venv
+# ══════════════════════════════════════════════════════════════════════════════
+FROM base AS builder
+
+WORKDIR /build
+
+# Create venv inside the build stage so it can be COPY'd to runtime images
+RUN python -m venv ${VIRTUAL_ENV}
+
+# Copy only the files needed to resolve dependencies first (maximises cache)
+COPY pyproject.toml ./
+COPY src/ src/
+
+# Install core project deps (no editable install — we copy src directly)
+RUN pip install --upgrade pip setuptools wheel hatchling \
+    && pip install ".[dev]"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Stage 3 — api: production FastAPI/Uvicorn image  (default build target)
+# ══════════════════════════════════════════════════════════════════════════════
+FROM base AS api
+
+ARG APP_USER
+ARG APP_UID
+
+LABEL org.opencontainers.image.title="ARECCA API" \
+      org.opencontainers.image.description="Automated Real Estate Contract Compliance Auditor — FastAPI Runtime" \
+      org.opencontainers.image.version="1.0.0" \
+      org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
 
-# Upgrade build tools
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel hatchling
+# Copy the pre-built venv from builder (no pip invocation at runtime)
+COPY --from=builder --chown=${APP_USER}:${APP_USER} ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 
-# Pre-build wheels for all dependencies (caches layers for faster rebuilds)
-COPY pyproject.toml .
-COPY src/ src/
-RUN pip wheel --no-cache-dir --wheel-dir=/app/wheels . && \
-    pip wheel --no-cache-dir --wheel-dir=/app/wheels ".[dev]"
+# Copy application source
+COPY --chown=${APP_USER}:${APP_USER} src/         ./src/
+COPY --chown=${APP_USER}:${APP_USER} configs/     ./configs/
+COPY --chown=${APP_USER}:${APP_USER} prompts/     ./prompts/
+COPY --chown=${APP_USER}:${APP_USER} scripts/     ./scripts/
+COPY --chown=${APP_USER}:${APP_USER} pyproject.toml ./
+COPY --chown=${APP_USER}:${APP_USER} .env.example ./
 
-# ── Stage 2: Runtime ─────────────────────────────────────────────────────────
-FROM python:3.11-slim-bookworm AS runtime
+# Set ML model cache dirs to writable locations
+ENV HF_HOME=/app/data/cache/huggingface \
+    FASTEMBED_CACHE_DIR=/app/data/cache/fastembed
 
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# Persistent data directories (mounted as volumes in production)
+RUN mkdir -p data/uploads data/memory data/cache/huggingface data/cache/fastembed \
+    && chown -R ${APP_USER}:${APP_USER} data/
 
-ARG DEBIAN_FRONTEND=noninteractive
-ARG APP_USER=arecca
-ARG APP_GROUP=arecca
-ARG APP_HOME=/app
-ARG APP_PORT=8000
-
-# System dependencies for runtime
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    libglib2.0-0 \
-    libgl1-mesa-glx \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create non-root user and group
-RUN groupadd --system --gid 1001 ${APP_GROUP} && \
-    useradd --system --uid 1001 --gid ${APP_GROUP} --home ${APP_HOME} --shell /sbin/nologin ${APP_USER}
-
-WORKDIR ${APP_HOME}
-
-# Copy pre-built wheels from builder
-COPY --from=builder /app/wheels /app/wheels
-
-# Install wheels (no internet needed, pure local install)
-RUN pip install --no-cache-dir --no-index --find-links=/app/wheels arecca && \
-    rm -rf /app/wheels
-
-# Create required directories with correct permissions (including Hugging Face & Fastembed caches)
-RUN mkdir -p ${APP_HOME}/data/memory \
-             ${APP_HOME}/data/uploads \
-             ${APP_HOME}/data/cache/huggingface \
-             ${APP_HOME}/data/cache/fastembed \
-             ${APP_HOME}/configs \
-             ${APP_HOME}/prompts \
-             ${APP_HOME}/prompts/extraction \
-             ${APP_HOME}/prompts/compliance \
-    && chown -R ${APP_USER}:${APP_GROUP} ${APP_HOME}/data
-
-# Copy runtime configs, prompts, and scripts
-COPY --chown=${APP_USER}:${APP_GROUP} configs/ ${APP_HOME}/configs/
-COPY --chown=${APP_USER}:${APP_GROUP} prompts/ ${APP_HOME}/prompts/
-COPY --chown=${APP_USER}:${APP_GROUP} scripts/ ${APP_HOME}/scripts/
-
-# Copy .env.example as reference (real .env mounted at runtime)
-COPY --chown=${APP_USER}:${APP_GROUP} .env.example ${APP_HOME}/.env.example
-
-# Set Environment Variables to redirect ML Model caches to our writable directory
-ENV HF_HOME=${APP_HOME}/data/cache/huggingface
-ENV FASTEMBED_CACHE_DIR=${APP_HOME}/data/cache/fastembed
-ENV PORT=${APP_PORT}
-
-# Expose application port
-EXPOSE ${APP_PORT}
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD sh -c 'curl --fail http://localhost:${PORT:-8000}/health || exit 1'
-
-# Drop privileges
 USER ${APP_USER}
 
-# Default command - bind to Railway runtime port
-CMD ["sh", "-c", "uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+EXPOSE 8000
+
+# Liveness probe — must match the port uvicorn binds to
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+
+# Production: single Uvicorn worker on $PORT (override via PORT env var; defaults to 8000)
+CMD uvicorn src.api.main:app \
+     --host 0.0.0.0 \
+     --port ${PORT:-8000} \
+     --workers 1 \
+     --access-log \
+     --proxy-headers \
+     --forwarded-allow-ips "*"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Stage 4 — chainlit: production Chainlit UI image
+# ══════════════════════════════════════════════════════════════════════════════
+FROM base AS chainlit
+
+ARG APP_USER
+ARG APP_UID
+
+LABEL org.opencontainers.image.title="ARECCA Chainlit UI" \
+      org.opencontainers.image.description="Automated Real Estate Contract Compliance Auditor — Chainlit Runtime" \
+      org.opencontainers.image.version="1.0.0" \
+      org.opencontainers.image.licenses="MIT"
+
+WORKDIR /app
+
+COPY --from=builder --chown=${APP_USER}:${APP_USER} ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+
+COPY --chown=${APP_USER}:${APP_USER} src/            ./src/
+COPY --chown=${APP_USER}:${APP_USER} configs/        ./configs/
+COPY --chown=${APP_USER}:${APP_USER} prompts/        ./prompts/
+COPY --chown=${APP_USER}:${APP_USER} chainlit.md     ./
+COPY --chown=${APP_USER}:${APP_USER} .chainlit/      ./.chainlit/
+COPY --chown=${APP_USER}:${APP_USER} pyproject.toml  ./
+
+ENV HF_HOME=/app/data/cache/huggingface \
+    FASTEMBED_CACHE_DIR=/app/data/cache/fastembed
+
+RUN mkdir -p data/uploads data/memory data/cache/huggingface data/cache/fastembed \
+    && chown -R ${APP_USER}:${APP_USER} data/
+
+USER ${APP_USER}
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/ || exit 1
+
+CMD ["chainlit", "run", "src/ui/chainlit_app.py", \
+     "--host", "0.0.0.0", \
+     "--port", "8080"]
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Stage 5 — dev: hot-reload development image (not for production)
+# ══════════════════════════════════════════════════════════════════════════════
+FROM builder AS dev
+
+LABEL org.opencontainers.image.title="ARECCA Dev" \
+      org.opencontainers.image.description="Development image with hot-reload"
+
+WORKDIR /app
+
+# Mount the project root as a volume for hot-reload
+COPY . .
+
+# Install the project in editable mode so code changes are reflected instantly
+RUN pip install -e ".[dev]"
+
+EXPOSE 8000 8080
+
+# Default: API with hot-reload (override to run chainlit)
+CMD ["uvicorn", "src.api.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--reload"]
