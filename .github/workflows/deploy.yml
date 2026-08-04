@@ -365,6 +365,15 @@ jobs:
       chainlit_fqdn: ${{ steps.deploy-chainlit.outputs.fqdn || '' }}
 
     steps:
+      - name: Debug OIDC claims
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Environment: ${{ github.environment }}"
+          echo "Actor: ${{ github.actor }}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
       - name: Log in to Azure
         uses: azure/login@v2
         with:
@@ -467,6 +476,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Debug OIDC claims
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Environment: ${{ github.environment }}"
+          echo "Actor: ${{ github.actor }}"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Log in to Azure
         uses: azure/login@v2
